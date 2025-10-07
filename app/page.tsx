@@ -10,12 +10,134 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Play, Database, Trash2 } from "lucide-react";
+import { X, Play, Database, Trash2 } from "lucide-react";
 import { SQLEditor } from "@/components/sql-editor";
+import { RelationalAlgebraConverter } from "@/components/relational-algebra-converter";
 
 interface QueryResult {
   columns: string[];
   values: any[][];
+}
+
+interface ResultsPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  result: QueryResult | null;
+  error: string | null;
+  isLoading: boolean;
+}
+
+function ResultsPanel({
+  isOpen,
+  onClose,
+  result,
+  error,
+  isLoading,
+}: ResultsPanelProps) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className={`fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+          isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+        }`}
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div
+        className={`fixed right-0 top-0 h-full w-full max-w-2xl bg-background border-l shadow-lg overflow-hidden transition-transform duration-300 ease-in-out z-50 ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex flex-col h-full">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-lg font-semibold">Query Results</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-4">
+            {isLoading && (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-muted-foreground">Executing query...</div>
+              </div>
+            )}
+
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {result && !isLoading && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Results</CardTitle>
+                  <CardDescription>
+                    {result.values.length} row(s) returned
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b bg-muted/50">
+                          {result.columns.map((col, i) => (
+                            <th
+                              key={i}
+                              className="px-4 py-3 text-left font-semibold text-sm"
+                            >
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {result.values.map((row, i) => (
+                          <tr key={i} className="border-b hover:bg-muted/30">
+                            {row.map((cell, j) => (
+                              <td
+                                key={j}
+                                className="px-4 py-3 text-sm font-mono"
+                              >
+                                {cell === null ? (
+                                  <span className="text-muted-foreground italic">
+                                    NULL
+                                  </span>
+                                ) : (
+                                  String(cell)
+                                )}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!result && !error && !isLoading && (
+              <div className="text-center text-muted-foreground py-8">
+                No results to display
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
 }
 
 export default function SQLiteCodePad() {
@@ -28,6 +150,7 @@ export default function SQLiteCodePad() {
   const [isLoading, setIsLoading] = useState(false);
   const [fileName, setFileName] = useState<string | null>(null);
   const [sqliteReady, setSqliteReady] = useState(false);
+  const [isResultsPanelOpen, setIsResultsPanelOpen] = useState(false);
   const sqliteRef = useRef<any>(null);
 
   useEffect(() => {
@@ -106,12 +229,14 @@ export default function SQLiteCodePad() {
   const executeQuery = () => {
     if (!db) {
       setError("Database not loaded");
+      setIsResultsPanelOpen(true);
       return;
     }
 
     setIsLoading(true);
     setError(null);
     setResult(null);
+    setIsResultsPanelOpen(true);
 
     try {
       const trimmedQuery = query.trim().toUpperCase();
@@ -167,6 +292,10 @@ export default function SQLiteCodePad() {
     setFileName("New Database (in-memory)");
     setError(null);
     setResult(null);
+  };
+
+  const closeResultsPanel = () => {
+    setIsResultsPanelOpen(false);
   };
 
   return (
@@ -227,57 +356,16 @@ export default function SQLiteCodePad() {
           </CardContent>
         </Card>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {/* <RelationalAlgebraConverter sqlQuery={query} /> */}
 
-        {result && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Results</CardTitle>
-              <CardDescription>
-                {result.values.length} row(s) returned
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      {result.columns.map((col, i) => (
-                        <th
-                          key={i}
-                          className="px-4 py-3 text-left font-semibold text-sm"
-                        >
-                          {col}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {result.values.map((row, i) => (
-                      <tr key={i} className="border-b hover:bg-muted/30">
-                        {row.map((cell, j) => (
-                          <td key={j} className="px-4 py-3 text-sm font-mono">
-                            {cell === null ? (
-                              <span className="text-muted-foreground italic">
-                                NULL
-                              </span>
-                            ) : (
-                              String(cell)
-                            )}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Results Panel */}
+        <ResultsPanel
+          isOpen={isResultsPanelOpen}
+          onClose={closeResultsPanel}
+          result={result}
+          error={error}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );
