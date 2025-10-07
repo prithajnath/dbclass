@@ -12,7 +12,6 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { X, Play, Database, Trash2 } from "lucide-react";
 import { SQLEditor } from "@/components/sql-editor";
-import { RelationalAlgebraConverter } from "@/components/relational-algebra-converter";
 
 interface QueryResult {
   columns: string[];
@@ -355,8 +354,6 @@ export default function SQLiteCodePad() {
             </Button>
           </CardContent>
         </Card>
-
-        {/* <RelationalAlgebraConverter sqlQuery={query} /> */}
 
         {/* Results Panel */}
         <ResultsPanel
