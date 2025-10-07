@@ -1,34 +1,38 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import { EditorView, basicSetup } from "codemirror"
-import { sql, SQLDialect } from "@codemirror/lang-sql"
-import { oneDark } from "@codemirror/theme-one-dark"
-import { Compartment } from "@codemirror/state"
+import { useEffect, useRef } from "react";
+import { EditorView, basicSetup } from "codemirror";
+import { sql, StandardSQL } from "@codemirror/lang-sql";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { Compartment } from "@codemirror/state";
 
 interface SQLEditorProps {
-  value: string
-  onChange: (value: string) => void
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export function SQLEditor({ value, onChange, disabled = false }: SQLEditorProps) {
-  const editorRef = useRef<HTMLDivElement>(null)
-  const viewRef = useRef<EditorView | null>(null)
-  const editableCompartment = useRef(new Compartment())
+export function SQLEditor({
+  value,
+  onChange,
+  disabled = false,
+}: SQLEditorProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const editableCompartment = useRef(new Compartment());
 
   useEffect(() => {
-    if (!editorRef.current) return
+    if (!editorRef.current) return;
 
     const view = new EditorView({
       doc: value,
       extensions: [
         basicSetup,
-        sql({ dialect: SQLDialect.SQLite }),
+        sql({ dialect: StandardSQL }),
         oneDark,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
-            onChange(update.state.doc.toString())
+            onChange(update.state.doc.toString());
           }
         }),
         editableCompartment.current.of(EditorView.editable.of(!disabled)),
@@ -39,42 +43,46 @@ export function SQLEditor({ value, onChange, disabled = false }: SQLEditorProps)
           },
           ".cm-scroller": {
             overflow: "auto",
-            fontFamily: '"Courier New", Courier, "Lucida Console", Monaco, monospace',
+            fontFamily:
+              '"Courier New", Courier, "Lucida Console", Monaco, monospace',
           },
           ".cm-content": {
             minHeight: "200px",
-            fontFamily: '"Courier New", Courier, "Lucida Console", Monaco, monospace',
+            fontFamily:
+              '"Courier New", Courier, "Lucida Console", Monaco, monospace',
           },
         }),
       ],
       parent: editorRef.current,
-    })
+    });
 
-    viewRef.current = view
+    viewRef.current = view;
 
     return () => {
-      view.destroy()
-    }
-  }, [])
+      view.destroy();
+    };
+  }, []);
 
   useEffect(() => {
     if (viewRef.current) {
-      const currentValue = viewRef.current.state.doc.toString()
+      const currentValue = viewRef.current.state.doc.toString();
       if (currentValue !== value) {
         viewRef.current.dispatch({
           changes: { from: 0, to: currentValue.length, insert: value },
-        })
+        });
       }
     }
-  }, [value])
+  }, [value]);
 
   useEffect(() => {
     if (viewRef.current) {
       viewRef.current.dispatch({
-        effects: editableCompartment.current.reconfigure(EditorView.editable.of(!disabled)),
-      })
+        effects: editableCompartment.current.reconfigure(
+          EditorView.editable.of(!disabled)
+        ),
+      });
     }
-  }, [disabled])
+  }, [disabled]);
 
-  return <div ref={editorRef} className="border rounded-md overflow-hidden" />
+  return <div ref={editorRef} className="border rounded-md overflow-hidden" />;
 }
